@@ -1,7 +1,5 @@
 #TODO: Add header comment
 #TODO: Add Bool ast Expr
-#TODO: Add Let, Name
-#TODO: Add Eval, EvalInEnv
 
 
 from dataclasses import dataclass
@@ -160,10 +158,12 @@ def main():
     a : Expr = Add(Lit(1), Lit(1))
     b : Expr = Mul(Lit(2), Add(Lit(1), Neg(Lit(1))))
     c : Expr = Let('x', Lit(2), Div(Lit(4), Name('x')))
+    d : Expr = Div(Lit(1), Lit(0))
 
     print(f"{a} = {eval(a)}")
     print(f"{b} = {eval(b)}")
     print(f"{c} = {eval(c)}")
+    #print(f"{d} = {eval(d)}")  # this will raise EvalError, div by zero
 
 if __name__=="__main__":
     main()
