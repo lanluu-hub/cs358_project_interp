@@ -115,8 +115,8 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
                     return lv + rv
                 case _:
                     raise EvalError("addition of non-intergers")
-                
-            match Sub(l,r):
+        case Sub(l,r):
+            match (evalInEnv(env, l), evalInEnv(env,r)):
                 case (int(lv), int(rv)):
                     return lv - rv
                 case _:
