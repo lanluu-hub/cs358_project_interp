@@ -1,12 +1,12 @@
 #TODO: Add header comment
-#TODO: Add Bool ast Expr
+#TODO: Add Bool ast Expr and update Eval
 
 
 from dataclasses import dataclass
 
-type Literal = int
+type Literal = int | bool
 
-type Expr = Add | Sub | Mul | Div | Neg | Let | Name | Lit
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Name | Lit
 
 @dataclass
 class Add():
@@ -41,6 +41,26 @@ class Neg():
     subexpr: Expr
     def __str__(self) -> str:
         return f"(- {self.subexpr})"
+    
+@dataclass
+class Or():
+    left: Expr
+    right: Expr
+    def __str__(self) -> str:
+        return f"({self.left} or {self.right})"
+    
+@dataclass
+class And():
+    left: Expr
+    right: Expr
+    def __str__(self) -> str:
+        return f"({self.left} and {self.right})"
+    
+@dataclass
+class Not():
+    subexpr: Expr
+    def __str__(self) -> str:
+        return f"(not {self.subexpr})"
     
 @dataclass
 class Let():
@@ -139,6 +159,24 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
                     return -i
                 case _:
                     raise EvalError("negation of non-integer")
+        case Or(l,r):
+            match (evalInEnv(env, l), evalInEnv(env, r)):
+                case (bool(lv), bool(rv)):
+                    return lv or rv
+                case _:
+                    raise EvalError("or of non-bools")
+        case And(l,r):
+            match (evalInEnv(env, l), evalInEnv(env, r)):
+                case (bool(lv), bool(rv)):
+                    return lv and rv
+                case _:
+                    raise EvalError("and of non-bools")
+        case Not(s):
+            match evalInEnv(env, s):
+                case bool(sv):
+                    return not sv
+                case _:
+                    raise EvalError("not of non-bool")
         case Lit(lit):
             match lit: #n-level matching keeps type-checking happy
                 case int(i):
@@ -159,11 +197,21 @@ def main():
     b : Expr = Mul(Lit(2), Add(Lit(1), Neg(Lit(1))))
     c : Expr = Let('x', Lit(2), Div(Lit(4), Name('x')))
     d : Expr = Div(Lit(1), Lit(0))
+    e : Expr = Lit(True)
+    f : Expr = Or(Lit(True), Lit(False))
+    g : Expr = And(Lit(True), Lit(False))
+    h : Expr = Let("x", Lit(True), Let("y", Name("x"), Not(Name("y"))))
+
+
 
     print(f"{a} = {eval(a)}")
     print(f"{b} = {eval(b)}")
     print(f"{c} = {eval(c)}")
     #print(f"{d} = {eval(d)}")  # this will raise EvalError, div by zero
+    print(f"{e} = {eval(e)}")
+    print(f"{f} = {eval(f)}")
+    print(f"{g} = {eval(g)}")
+    print(f"{h} = {eval(h)}")
 
 if __name__=="__main__":
     main()
