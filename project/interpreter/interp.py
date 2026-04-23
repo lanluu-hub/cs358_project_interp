@@ -1,8 +1,9 @@
 #TODO: Add header comment
-#TODO: Add Bool ast Expr and update Eval
+#TODO: Add Eq, Lt, If
 
 
 from dataclasses import dataclass
+from unittest import case
 
 type Literal = int | bool
 
@@ -160,15 +161,31 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
                 case _:
                     raise EvalError("negation of non-integer")
         case Or(l,r):
-            match (evalInEnv(env, l), evalInEnv(env, r)):
-                case (bool(lv), bool(rv)):
-                    return lv or rv
+            lv = evalInEnv(env, l)
+            match lv:
+                case bool(True):
+                    return True
+                case bool(False):
+                    rv = evalInEnv(env, r)
+                    match rv:
+                        case bool(rv):
+                            return rv   
+                        case _:
+                            raise EvalError("or of non-bools")
                 case _:
                     raise EvalError("or of non-bools")
         case And(l,r):
-            match (evalInEnv(env, l), evalInEnv(env, r)):
-                case (bool(lv), bool(rv)):
-                    return lv and rv
+            lv = evalInEnv(env, l)
+            match lv:
+                case bool(False):
+                    return False
+                case bool(True):
+                    rv = evalInEnv(env, r)
+                    match rv:
+                        case bool(rv):
+                            return rv
+                        case _:
+                            raise EvalError("and of non-bools")
                 case _:
                     raise EvalError("and of non-bools")
         case Not(s):
