@@ -230,6 +230,27 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
             v = evalInEnv(env, d)
             newEnv = extendEnv(n, v, env)
             return evalInEnv(newEnv, b)
+        case Eq(l, r):
+            lv = evalInEnv(env, l)
+            rv = evalInEnv(env, r)
+            if type(lv) != type(rv):
+                return False
+            return lv == rv
+        case Lt(l, r):
+            match (evalInEnv(env, l), evalInEnv(env, r)):
+                case (int(lv), int(rv)):
+                    return lv < rv
+                case _:
+                    raise EvalError("less-than of non-integers")
+        case If(b, t, e):
+            match evalInEnv(env, b):
+                case bool(True):
+                    return evalInEnv(env, t)
+                case bool(False):
+                    return evalInEnv(env, e)
+                case _:
+                    raise EvalError("condition is not a boolean")
+
 
 def main():
     a : Expr = Add(Lit(1), Lit(1))
