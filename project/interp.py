@@ -7,7 +7,7 @@ from unittest import case
 
 type Literal = int | bool
 
-type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Name | Lit
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Name | Lit | Eq | Lt | If
 
 @dataclass
 class Add():
@@ -82,6 +82,28 @@ class Lit():
     value: Literal
     def __str__(self) -> str:
         return f"{self.value}"
+    
+@dataclass
+class Eq():
+    left: Expr
+    right: Expr
+    def __str__(self):
+        return f"({self.left} = {self.right})"
+
+@dataclass
+class Lt():
+    left: Expr
+    right: Expr
+    def __str__(self):
+        return f"{self.left} < {self.right}"
+
+@dataclass
+class If():
+    boolopr: Expr
+    thenexpr: Expr
+    elseexpr: Expr
+    def __str__(self):
+        return f"if {self.boolopr} then {self.thenexpr} else {self.elseexpr}"
     
 # Eval
 type Binding[V] = tuple[str,V] # this tuple type is always a pair
@@ -218,6 +240,9 @@ def main():
     f : Expr = Or(Lit(True), Lit(False))
     g : Expr = And(Lit(True), Lit(False))
     h : Expr = Let("x", Lit(True), Let("y", Name("x"), Not(Name("y"))))
+    i : Expr = If(Eq(Lit(1), Lit(1)), Lit(1), Lit(0))
+    j : Expr = Eq(Lit(1), Lit(1))
+    k : Expr = Lt(Lit(1), Lit(2))
 
 
 
@@ -229,6 +254,10 @@ def main():
     print(f"{f} = {eval(f)}")
     print(f"{g} = {eval(g)}")
     print(f"{h} = {eval(h)}")
+    print(f"{i} = {eval(i)}")
+    print(f"{j} = {eval(j)}")
+    print(f"{k} = {eval(k)}")
+
 
 if __name__=="__main__":
     main()
