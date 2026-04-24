@@ -153,24 +153,32 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
         case Add(l,r):
             match (evalInEnv(env, l), evalInEnv(env,r)):
                 case (int(lv), int(rv)):
+                    if isinstance(lv, bool) or isinstance(rv, bool):
+                        raise EvalError("addition of non-integers")
                     return lv + rv
                 case _:
                     raise EvalError("addition of non-intergers")
         case Sub(l,r):
             match (evalInEnv(env, l), evalInEnv(env,r)):
                 case (int(lv), int(rv)):
+                    if isinstance(lv, bool) or isinstance(rv, bool):
+                        raise EvalError("subtraction of non-integers")
                     return lv - rv
                 case _:
                     raise EvalError("subtraction of non-integers")
         case Mul(l,r):
             match (evalInEnv(env, l), evalInEnv(env,r)):
                 case (int(lv), int(rv)):
+                    if isinstance(lv, bool) or isinstance(rv, bool):
+                        raise EvalError("multiplication of non-integers")
                     return lv * rv
                 case _:
                     raise EvalError("multiplication of non-integers")
         case Div(l,r):
             match (evalInEnv(env, l), evalInEnv(env,r)):
                 case (int(lv), int(rv)):
+                    if isinstance(lv, bool) or isinstance(rv, bool):
+                        raise EvalError("division of non-integers")
                     if rv == 0:
                         raise EvalError("division by zero")
                     return lv // rv
@@ -179,6 +187,8 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
         case Neg(s):
             match evalInEnv(env,s):
                 case int(i):
+                    if isinstance(i, bool):
+                        raise EvalError("negation of non-integer")
                     return -i
                 case _:
                     raise EvalError("negation of non-integer")
@@ -220,6 +230,8 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
             match lit: #n-level matching keeps type-checking happy
                 case int(i):
                     return i
+                case bool(b):
+                    return b
                 #TODO: add for Bool and Str later
         case Name(n):
             v = lookupEnv(n, env)
@@ -239,6 +251,8 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
         case Lt(l, r):
             match (evalInEnv(env, l), evalInEnv(env, r)):
                 case (int(lv), int(rv)):
+                    if isinstance(lv, bool) or isinstance(rv, bool):
+                        raise EvalError("less-than of non-integers")
                     return lv < rv
                 case _:
                     raise EvalError("less-than of non-integers")
