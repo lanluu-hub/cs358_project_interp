@@ -3,8 +3,8 @@ from unittest import TestCase
 
 import contextlib
 with contextlib.redirect_stdout(None), contextlib.redirect_stderr(None):
-    import interp
-    from interp import Lit, Add, Sub, Mul, Div, Neg, And, Or, Not, Let, Name, Eq, Lt, If
+    from interpreter import interp
+    from interpreter.interp import Lit, Add, Sub, Mul, Div, Neg, And, Or, Not, Let, Name, Eq, Lt, If
 
 
 class TestEval(TestCase):
