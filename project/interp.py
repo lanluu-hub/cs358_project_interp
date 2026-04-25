@@ -1,5 +1,5 @@
 #TODO: Add header comment
-#TODO: Add Eq, Lt, If
+#TODO: Add String representations for all Expr classes (for debugging and testing)
 
 
 from dataclasses import dataclass
@@ -228,10 +228,10 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
                     raise EvalError("not of non-bool")
         case Lit(lit):
             match lit: #n-level matching keeps type-checking happy
-                case int(i):
-                    return i
                 case bool(b):
                     return b
+                case int(i):
+                    return i
                 #TODO: add for Bool and Str later
         case Name(n):
             v = lookupEnv(n, env)
@@ -265,6 +265,16 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
                 case _:
                     raise EvalError("condition is not a boolean")
 
+def run(e: Expr) -> None:
+    print(f"running {e}")
+    try:
+        match eval(e):
+            case bool(b):
+                print(f"result: {b}")
+            case int(i):
+                print(f"result: {i}")
+    except EvalError as err:
+        print(f"[!] {err}")
 
 def main():
     a : Expr = Add(Lit(1), Lit(1))
@@ -278,9 +288,10 @@ def main():
     i : Expr = If(Eq(Lit(1), Lit(1)), Lit(1), Lit(0))
     j : Expr = Eq(Lit(1), Lit(1))
     k : Expr = Lt(Lit(1), Lit(2))
+    l : Expr = Or(Lit(1), Lit(False)) # this will raise EvalError, or of non-bools
 
 
-
+    '''
     print(f"{a} = {eval(a)}")
     print(f"{b} = {eval(b)}")
     print(f"{c} = {eval(c)}")
@@ -292,7 +303,20 @@ def main():
     print(f"{i} = {eval(i)}")
     print(f"{j} = {eval(j)}")
     print(f"{k} = {eval(k)}")
+    print(f"{l} = {eval(l)}") # this will raise EvalError, or of non-bools
+    '''
 
+    run(a)
+    run(b)
+    run(c)
+    run(e)
+    run(f)
+    run(g)
+    run(h)
+    run(i)
+    run(j)
+    run(k)
+    #run(l) # this will raise EvalError, or of non-bools 
 
 if __name__=="__main__":
     main()
