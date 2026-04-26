@@ -3,7 +3,7 @@
 
 
 from dataclasses import dataclass
-from unittest import case
+#from unittest import case
 
 type Literal = int | bool
 
@@ -274,7 +274,7 @@ def run(e: Expr) -> None:
             case int(i):
                 print(f"result: {i}")
     except EvalError as err:
-        print(f"[!] {err}")
+        print(f"[!] EvalError: {err}")
 
 def main():
     a : Expr = Add(Lit(1), Lit(1))
@@ -316,7 +316,7 @@ def main():
     run(i)
     run(j)
     run(k)
-    #run(l) # this will raise EvalError, or of non-bools 
+    run(l) # this will raise EvalError, or of non-bools 
 
 if __name__=="__main__":
     main()
