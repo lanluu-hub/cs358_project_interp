@@ -7,7 +7,7 @@ from unittest import case
 
 type Literal = int | bool | str
 
-type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Name | Lit | Eq | Lt | If
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Name | Concat | Replace | Lit | Eq | Lt | If 
 
 @dataclass
 class Add():
@@ -77,6 +77,21 @@ class Name():
     def __str__(self) -> str:
         return self.name
     
+@dataclass
+class Concat():
+    left: Expr
+    right: Expr
+    def __str__(self) -> str:
+        return f"(concatenate {self.left} {self.right})"
+    
+@dataclass
+class Replace():
+    source: Expr
+    target: Expr
+    replacement: Expr
+    def __str__(self) -> str:
+        return f"(replace {self.source} {self.target} with {self.replacement})"
+
 @dataclass
 class Lit():
     value: Literal
@@ -234,6 +249,21 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
                     return i
                 case str(s):
                     return s
+        case Concat(l, r):
+            match (evalInEnv(env, l), evalInEnv(env, r)):
+                case (str(lv), str(rv)):
+                    return lv + rv
+                case _:
+                    raise EvalError("concatenation of non-string")
+        case Replace(s, t, r):
+            match (evalInEnv(env, s), evalInEnv(env, t), evalInEnv(env, r)):
+                case (str(src), str(tgt), str(repl)):
+                    if tgt not in src:
+                        return src # target not found, return source unchanged
+                    else:
+                        return src.replace(tgt, repl, 1)
+                case _: 
+                    raise EvalError("Replace of non-string")
         case Name(n):
             v = lookupEnv(n, env)
             if v is None:
@@ -280,39 +310,42 @@ def run(e: Expr) -> None:
         print(f"[!] EvalError: {err}")
 
 def main():
+    # Core arithmetic
     a : Expr = Add(Lit(1), Lit(1))
     b : Expr = Mul(Lit(2), Add(Lit(1), Neg(Lit(1))))
     c : Expr = Let('x', Lit(2), Div(Lit(4), Name('x')))
-    d : Expr = Div(Lit(1), Lit(0))
+    d : Expr = Div(Lit(1), Lit(0))                          # EvalError: division by zero
+
+    # Core boolean
     e : Expr = Lit(True)
     f : Expr = Or(Lit(True), Lit(False))
     g : Expr = And(Lit(True), Lit(False))
     h : Expr = Let("x", Lit(True), Let("y", Name("x"), Not(Name("y"))))
-    i : Expr = If(Eq(Lit(1), Lit(1)), Lit(1), Lit(0))
+    i : Expr = Or(Lit(1), Lit(False))                       # EvalError: or of non-bools
+
+    # Comparisons and conditionals
     j : Expr = Eq(Lit(1), Lit(1))
     k : Expr = Lt(Lit(1), Lit(2))
-    l : Expr = Or(Lit(1), Lit(False)) # this will raise EvalError, or of non-bools
-    m : Expr = Lit("Hello, is me!\n\nThis should under 2 new lines")
+    l : Expr = If(Eq(Lit(1), Lit(1)), Lit(1), Lit(0))
 
+    # String DSL - happy path
+    m : Expr = Concat(Lit("Hello"), Lit("World"))
+    n : Expr = Let("s", Lit("Hello"), Concat(Name("s"), Lit(" World")))
+    o : Expr = Replace(Lit("Hello World!"), Lit("World"), Lit("Banana"))
+    p : Expr = Replace(Lit("aabbaa"), Lit("aa"), Lit("xx"))  # first instance only
+    q : Expr = Replace(Lit("Hello World"), Lit("xyz"), Lit("Banana"))  # target not found
 
-    '''
-    print(f"{a} = {eval(a)}")
-    print(f"{b} = {eval(b)}")
-    print(f"{c} = {eval(c)}")
-    #print(f"{d} = {eval(d)}")  # this will raise EvalError, div by zero
-    print(f"{e} = {eval(e)}")
-    print(f"{f} = {eval(f)}")
-    print(f"{g} = {eval(g)}")
-    print(f"{h} = {eval(h)}")
-    print(f"{i} = {eval(i)}")
-    print(f"{j} = {eval(j)}")
-    print(f"{k} = {eval(k)}")
-    print(f"{l} = {eval(l)}") # this will raise EvalError, or of non-bools
-    '''
+    # String DSL - error cases
+    r : Expr = Concat(Lit(1), Lit("string"))                # EvalError: concatenation of non-string
+    s : Expr = Replace(Lit("Hello"), Lit(1), Lit("x"))      # EvalError: replace of non-string
+
+    # DSL + core combined
+    t : Expr = If(Eq(Lit(1), Lit(1)), Concat(Lit("yes"), Lit("!")), Lit("no"))
 
     run(a)
     run(b)
     run(c)
+    run(d)
     run(e)
     run(f)
     run(g)
@@ -320,8 +353,15 @@ def main():
     run(i)
     run(j)
     run(k)
-    run(l) # this will raise EvalError, or of non-bools 
+    run(l)
     run(m)
+    run(n)
+    run(o)
+    run(p)
+    run(q)
+    run(r)
+    run(s)
+    run(t) 
 
 if __name__=="__main__":
     main()
