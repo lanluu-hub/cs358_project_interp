@@ -249,6 +249,8 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
                     return i
                 case str(s):
                     return s
+                case _:
+                    raise EvalError("Unknow Literal type") 
         case Concat(l, r):
             match (evalInEnv(env, l), evalInEnv(env, r)):
                 case (str(lv), str(rv)):
@@ -295,6 +297,8 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
                     return evalInEnv(env, e)
                 case _:
                     raise EvalError("condition is not a boolean")
+        case _:
+            raise EvalError(f"Unknow Expression type {e}")
 
 def run(e: Expr) -> None:
     print(f"running {e}")
@@ -305,7 +309,7 @@ def run(e: Expr) -> None:
             case int(i):
                 print(f"result: {i}")
             case str(s):
-                print(f"result: {s}")
+                print(f'result: "{s}"')
     except EvalError as err:
         print(f"[!] EvalError: {err}")
 
