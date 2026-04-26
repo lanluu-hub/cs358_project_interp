@@ -1,9 +1,9 @@
-#TODO: Add header comment
-#TODO: Add String representations for all Expr classes (for debugging and testing)
-
+# CS358 Interpreter
+# Domain: Strings DSL
+# Author: Lan Luu
+#   Milestone 1 - due April 26
 
 from dataclasses import dataclass
-from unittest import case
 
 type Literal = int | bool | str
 
@@ -309,14 +309,26 @@ def run(e: Expr) -> None:
     except EvalError as err:
         print(f"[!] EvalError: {err}")
 
+"""
+Domain-Specific Extension: Strings
+This DSL extends the core language with string manipulation.
+Values: Python strings (unicode)
+Literals: Lit("string") - quoted string literals
+Operators:
+  - Concat(l, r): concatenates two strings
+  - Replace(source, target, replacement): replaces first instance 
+    of target in source with replacement
+Equality: string equality is character-by-character (==)
+"""
+
 def main():
-    # Core arithmetic
+    # arithmetic
     a : Expr = Add(Lit(1), Lit(1))
     b : Expr = Mul(Lit(2), Add(Lit(1), Neg(Lit(1))))
     c : Expr = Let('x', Lit(2), Div(Lit(4), Name('x')))
     d : Expr = Div(Lit(1), Lit(0))                          # EvalError: division by zero
 
-    # Core boolean
+    # boolean
     e : Expr = Lit(True)
     f : Expr = Or(Lit(True), Lit(False))
     g : Expr = And(Lit(True), Lit(False))
@@ -328,19 +340,16 @@ def main():
     k : Expr = Lt(Lit(1), Lit(2))
     l : Expr = If(Eq(Lit(1), Lit(1)), Lit(1), Lit(0))
 
-    # String DSL - happy path
+    # String DSL 
     m : Expr = Concat(Lit("Hello"), Lit("World"))
     n : Expr = Let("s", Lit("Hello"), Concat(Name("s"), Lit(" World")))
     o : Expr = Replace(Lit("Hello World!"), Lit("World"), Lit("Banana"))
     p : Expr = Replace(Lit("aabbaa"), Lit("aa"), Lit("xx"))  # first instance only
     q : Expr = Replace(Lit("Hello World"), Lit("xyz"), Lit("Banana"))  # target not found
-
-    # String DSL - error cases
     r : Expr = Concat(Lit(1), Lit("string"))                # EvalError: concatenation of non-string
     s : Expr = Replace(Lit("Hello"), Lit(1), Lit("x"))      # EvalError: replace of non-string
 
-    # DSL + core combined
-    t : Expr = If(Eq(Lit(1), Lit(1)), Concat(Lit("yes"), Lit("!")), Lit("no"))
+    t : Expr = If(Eq(Lit("condition"), Lit("condition")), Concat(Lit("yes"), Lit("!")), Lit("no"))
 
     run(a)
     run(b)
