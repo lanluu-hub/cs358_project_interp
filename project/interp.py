@@ -3,9 +3,9 @@
 
 
 from dataclasses import dataclass
-#from unittest import case
+from unittest import case
 
-type Literal = int | bool
+type Literal = int | bool | str
 
 type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Name | Lit | Eq | Lt | If
 
@@ -232,7 +232,8 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
                     return b
                 case int(i):
                     return i
-                #TODO: add for Bool and Str later
+                case str(s):
+                    return s
         case Name(n):
             v = lookupEnv(n, env)
             if v is None:
@@ -273,6 +274,8 @@ def run(e: Expr) -> None:
                 print(f"result: {b}")
             case int(i):
                 print(f"result: {i}")
+            case str(s):
+                print(f"result: {s}")
     except EvalError as err:
         print(f"[!] EvalError: {err}")
 
@@ -289,6 +292,7 @@ def main():
     j : Expr = Eq(Lit(1), Lit(1))
     k : Expr = Lt(Lit(1), Lit(2))
     l : Expr = Or(Lit(1), Lit(False)) # this will raise EvalError, or of non-bools
+    m : Expr = Lit("Hello, is me!\n\nThis should under 2 new lines")
 
 
     '''
@@ -317,6 +321,7 @@ def main():
     run(j)
     run(k)
     run(l) # this will raise EvalError, or of non-bools 
+    run(m)
 
 if __name__=="__main__":
     main()
