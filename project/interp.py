@@ -5,9 +5,9 @@
 
 from dataclasses import dataclass
 
-type Literal = int | bool | str
+type Value = int | bool | str | Closure
 
-type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Name | Concat | Replace | Lit | Eq | Lt | If 
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | App | Name | Concat | Replace | Lit | Eq | Lt | If 
 
 @dataclass
 class Add():
@@ -72,6 +72,22 @@ class Let():
         return f"(let {self.name} = {self.defexpr} in {self.bodyexpr})" 
     
 @dataclass
+class Letfun():
+    name: str
+    arg: str
+    bodyexpr: Expr
+    inexpr: Expr
+    def __str__(self) -> str:
+        return f"letfun {self.name}({self.arg}) = {self.bodyexpr} in {self.inexpr} end"
+
+@dataclass
+class App():
+    fexpr: Expr
+    arg: Expr
+    def __str__(self) -> str:
+        return f"{self.fexpr}({self.arg})"
+
+@dataclass
 class Name():
     name: str
     def __str__(self) -> str:
@@ -94,7 +110,7 @@ class Replace():
 
 @dataclass
 class Lit():
-    value: Literal
+    value: Value
     def __str__(self) -> str:
         return f"{self.value}"
     
@@ -120,6 +136,19 @@ class If():
     def __str__(self):
         return f"if {self.boolopr} then {self.thenexpr} else {self.elseexpr}"
     
+@dataclass
+class Fun():
+    arg: str
+    bodyexpr: Expr
+    def __str__(self) -> str:
+        return f"{self.arg} -> {self.bodyexpr}"
+
+@dataclass
+class Closure():
+    arg: str
+    bodyexpr: Expr
+    env: Env[Value]
+
 # Eval
 type Binding[V] = tuple[str,V] # this tuple type is always a pair
 type Env[V] = tuple[Binding[V], ...] # This tuple type has arbitrary length
@@ -160,10 +189,10 @@ def lookupEnv[V](name: str, env: Env[V]) -> (V | None):
 class EvalError(Exception):
     pass
 
-def eval(e: Expr) -> Literal:
+def eval(e: Expr) -> Value:
     return evalInEnv(emptyEnv, e)
 
-def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
+def evalInEnv(env: Env[Value], e: Expr) -> Value:
     match e:
         case Add(l,r):
             match (evalInEnv(env, l), evalInEnv(env,r)):
@@ -275,6 +304,20 @@ def evalInEnv(env: Env[Literal], e: Expr) -> Literal:
             v = evalInEnv(env, d)
             newEnv = extendEnv(n, v, env)
             return evalInEnv(newEnv, b)
+        case Letfun(n,a,b,i):
+            c = Closure(a,b,env)
+            newEnv = extendEnv(n,c,env)
+            c.env = newEnv
+            return evalInEnv(newEnv, i)
+        case App(f,e):
+            n = evalInEnv(env, f)
+            a = evalInEnv(env, e)
+            match n:
+                case Closure(arg,body,cenv):
+                    newEnv = extendEnv(arg,a,cenv)
+                    return evalInEnv(newEnv,body)
+                case _:
+                    raise EvalError("Applying a non-function.")
         case Eq(l, r):
             lv = evalInEnv(env, l)
             rv = evalInEnv(env, r)
@@ -355,6 +398,15 @@ def main():
 
     t : Expr = If(Eq(Lit("condition"), Lit("condition")), Concat(Lit("yes"), Lit("!")), Lit("no"))
 
+    x : Expr = Letfun("double", "x", Mul(Lit(2), Name("x")), App(Name("double"), Lit(5)))
+        # expected: 10
+    y : Expr = Letfun("fact", "n",
+            If(Eq(Name("n"), Lit(0)),
+            Lit(1),
+            Mul(Name("n"), App(Name("fact"), Sub(Name("n"), Lit(1))))),
+            App(Name("fact"), Lit(5)))
+        # expected: 120
+
     run(a)
     run(b)
     run(c)
@@ -375,6 +427,8 @@ def main():
     run(r)
     run(s)
     run(t) 
+    run(x)
+    run(y)
 
 if __name__=="__main__":
     main()
