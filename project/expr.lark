@@ -18,8 +18,8 @@
 ?logic_not: "!" logic_not -> not
           | compare
 
-?compare: compare "==" compare -> equal
-        | compare "<" compare -> less
+?compare: add "==" add -> equal
+        | add "<" add -> less
         | add
 
 ?add: add "+" mul -> plus
