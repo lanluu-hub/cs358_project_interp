@@ -6,16 +6,16 @@
 
 ?expr: ifexpr
 
-?ifexpr: "if" ifexpr "then" ifexpr "else" ifexpr -> if
+?ifexpr: "if" ifexpr "then" ifexpr "else" ifexpr -> if_
        | logic_or
 
-?logic_or: logic_or "||" logic_and -> or
+?logic_or: logic_or "||" logic_and -> logic_or
          | logic_and
 
-?logic_and: logic_and "&&" logic_not -> and
+?logic_and: logic_and "&&" logic_not -> logic_and
           | logic_not
 
-?logic_not: "!" logic_not -> not
+?logic_not: "!" logic_not -> logic_not
           | compare
 
 ?compare: add "==" add -> equal
