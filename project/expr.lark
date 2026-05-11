@@ -1,0 +1,41 @@
+%import common.INT -> INT
+%import common.CNAME -> ID
+%import common.WS
+
+%ignore WS
+
+?expr: ifexpr
+
+?ifexpr: "if" ifexpr "then" ifexpr "else" ifexpr -> if
+       | logic_or
+
+?logic_or: logic_or "||" logic_and -> or
+         | logic_and
+
+?logic_and: logic_and "&&" logic_not -> and
+          | logic_not
+
+?logic_not: "!" logic_not -> not
+          | compare
+
+?compare: compare "==" compare -> equal
+        | compare "<" compare -> less
+        | add
+
+?add: add "+" mul -> plus
+    | add "-" mul -> minus
+    | mul
+
+?mul: mul "*" unary -> times
+    | mul "/" unary -> divide
+    | unary
+
+?unary: "-" unary -> neg
+      | atom
+
+?atom: ID -> id
+     | INT -> int
+     | "(" expr ")"
+     | "let" ID "=" expr "in" expr "end" -> let
+     | "letfun" ID "(" ID ")" "=" expr "in" expr "end" -> letfun
+     | atom "(" expr ")" -> app
