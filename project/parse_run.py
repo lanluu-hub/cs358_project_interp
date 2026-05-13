@@ -1,4 +1,9 @@
-from interp import Add, Sub, Mul, Div, Neg, And, Or, Not, Let, Letfun, App, Name, Lit, Eq, Lt, If, Expr, run
+import ast
+
+from interp import Add, Sub, Mul, Div, Neg, \
+                    And, Or, Not, Let, Letfun, \
+                    App, Name, Lit, Eq, Lt, If, \
+                    Expr, Concat, Replace, run
 
 from lark import Lark, Token, ParseTree, Transformer
 from lark.exceptions import VisitError
@@ -8,6 +13,7 @@ VERBOSE = False
 # VERBOSE = True    # uncomment for verbose output
 
 parser = Lark(Path('expr.lark').read_text(),start='expr',parser='earley',ambiguity='explicit')
+# parser = Lark(Path('expr.lark').read_text(),start='expr', parser='lalr',strict=True) # uncommon for unambiguous check
 
 class ParseError(Exception):
     pass
@@ -44,11 +50,11 @@ class ToExpr(Transformer[Token,Expr]):
         return Div(args[0],args[1])
     def neg(self, args:tuple[Expr]) -> Expr:
         return Neg(args[0])  
-    def logic_or(self,args:tuple[Expr,Expr]) -> Expr:
+    def lor(self,args:tuple[Expr,Expr]) -> Expr:
         return Or(args[0],args[1])
-    def logic_and(self,args:tuple[Expr,Expr]) -> Expr:
+    def land(self,args:tuple[Expr,Expr]) -> Expr:
         return And(args[0],args[1])
-    def logic_not(self,args:tuple[Expr]) -> Expr:
+    def lnot(self,args:tuple[Expr]) -> Expr:
         return Not(args[0])
     def let(self, args:tuple[Token,Expr,Expr]) -> Expr:
         return Let(args[0].value,args[1],args[2])
@@ -62,6 +68,12 @@ class ToExpr(Transformer[Token,Expr]):
                 return Name(n)
     def int(self,args:tuple[Token]) -> Expr:
         return Lit(int(args[0].value))
+    def string(self,args:tuple[Token]) -> Expr:
+        return Lit((ast.literal_eval(args[0].value)))
+    def concat(self,args:tuple[Expr,Expr]) -> Expr:
+        return Concat(args[0],args[1])
+    def repl(self,args:tuple[Expr,Expr,Expr]) -> Expr:
+        return Replace(args[0],args[1],args[2])
     def equal(self,args:tuple[Expr,Expr]) -> Expr:
         return Eq(args[0],args[1])
     def less(self,args:tuple[Expr,Expr]) -> Expr:
@@ -144,9 +156,40 @@ def main():
     parse_and_run("letfun double(x) = x * 2 in double(5) end")
     parse_and_run("letfun fact(n) = if n == 0 then 1 else n * fact(n - 1) in fact(5) end")
 
+    # string DSL
+    parse_and_run('"hello" ++ " world"')
+    parse_and_run('"hello" ++ " " ++ "world"')
+    parse_and_run('let s = "hello" in s ++ " world" end')
+    parse_and_run('replace "hello world" "world" with "banana"')
+    parse_and_run('replace "aabbaa" "aa" with "xx"')   # first instance only
+    parse_and_run('replace "hello" "xyz" with "banana"')  # target not found
+
+    # DSL + core combined
+    parse_and_run('if "hello" == "hello" then "yes" else "no"')
+    parse_and_run('if "hello" ++ " world" == "hello world" then true else false')
+    parse_and_run('letfun greet(x) = "hello " ++ x in greet("world") end')
+
     # error cases
     parse_and_run("1 + true")       # EvalError: addition of non-integers
     parse_and_run("1 / 0")          # EvalError: division by zero
+    
+    # type error cases - strings
+    parse_and_run('"hello" ++ 1')           # EvalError: concatenation of non-string
+    parse_and_run('replace 1 "a" with "b"') # EvalError: replace of non-string
+    parse_and_run('"hello" + "world"')      # EvalError: addition of non-integers
+
+    # type error cases - boolean
+    parse_and_run('1 && true')              # EvalError: and of non-bools
+    parse_and_run('"hello" || false')       # EvalError: or of non-bools
+    parse_and_run('!1')                     # EvalError: not of non-bool
+
+    # type error cases - comparison
+    parse_and_run('1 < true')              # EvalError: less-than of non-integers
+    parse_and_run('"hello" < "world"')     # EvalError: less-than of non-integers
+
+    # parse error cases
+    parse_and_run('1 +')                   # ParseError: incomplete expression
+    parse_and_run('let x = in x end')      # ParseError: missing definition
 
 if __name__ == "__main__":
     main()
