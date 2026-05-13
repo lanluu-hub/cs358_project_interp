@@ -7,7 +7,8 @@ from pathlib import Path
 VERBOSE = False
 # VERBOSE = True    # uncomment for verbose output
 
-parser = Lark(Path('expr.lark').read_text(),start='expr',parser='earley',ambiguity='explicit')
+# parser = Lark(Path('expr.lark').read_text(),start='expr',parser='earley',ambiguity='explicit')
+parser = Lark(Path('expr.lark').read_text(),start='expr', parser='lalr',strict=True) # uncommon for unambiguous check
 
 class ParseError(Exception):
     pass
