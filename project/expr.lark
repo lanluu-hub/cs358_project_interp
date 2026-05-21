@@ -5,15 +5,18 @@
 
 %ignore WS
 
-?start: seq
-
-?seq: expr ";" seq -> seq
-    | expr
+?start: expr
     
-?expr: ifexpr
+?expr: seq
      | "replace" strcat strcat "with" strcat -> repl
 
-?ifexpr: "if" ifexpr "then" ifexpr "else" ifexpr -> if_
+?seq: assign ";" seq -> seq
+    | assign 
+
+?assign: ID ":=" ifexpr -> assign
+       | ifexpr
+
+?ifexpr: "if" expr "then" expr "else" expr -> if_
        | logic_or
 
 ?logic_or: logic_or "||" logic_and -> lor

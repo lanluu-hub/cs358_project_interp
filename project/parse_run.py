@@ -4,7 +4,7 @@ from interp import Add, Sub, Mul, Div, Neg, \
                     And, Or, Not, Let, Letfun, \
                     App, Name, Lit, Eq, Lt, If, \
                     Expr, Concat, Replace, run, \
-                    Seq
+                    Seq, Assign
 
 from lark import Lark, Token, ParseTree, Transformer
 from lark.exceptions import VisitError
@@ -87,6 +87,8 @@ class ToExpr(Transformer[Token,Expr]):
         return If(args[0],args[1],args[2])
     def seq(self,args:tuple[Expr,Expr]) -> Expr:
         return Seq(args[0],args[1])
+    def assign(self,args:tuple[Token,Expr]) -> Expr:
+        return Assign(args[0],args[1])
     def _ambig(self,_) -> Expr:
         raise AmbiguousParse()
     
