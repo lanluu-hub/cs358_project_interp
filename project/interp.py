@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 type Value = int | bool | str | Closure
 
-type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If 
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If | Seq 
 
 @dataclass
 class Add():
@@ -148,6 +148,13 @@ class Closure():
     arg: str
     bodyexpr: Expr
     env: Env[Loc[Value]]
+
+@dataclass
+class Seq():
+    expr1: Expr
+    expr2: Expr
+    def __str__(self) -> str:
+        return f"({self.expr1}; {self.expr2})" 
 
 # Eval
 type Binding[V] = tuple[str,V] # this tuple type is always a pair
@@ -354,6 +361,9 @@ def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
                     return evalInEnv(env, e)
                 case _:
                     raise EvalError("condition is not a boolean")
+        case Seq(e1,e2):
+            evalInEnv(env, e1)
+            return evalInEnv(env, e2)
         case _:
             raise EvalError(f"Unknow Expression type {e}")
 
@@ -423,6 +433,8 @@ def main():
             App(Name("fact"), Lit(5)))
         # expected: 120
 
+    test: Expr = Seq(Add(Lit(1), Lit(1)), Mul(Lit(2),Lit(2)))
+
     run(a)
     run(b)
     run(c)
@@ -445,6 +457,7 @@ def main():
     run(t) 
     run(x)
     run(y)
+    run(test)
 
 if __name__=="__main__":
     main()

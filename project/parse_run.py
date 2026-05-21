@@ -3,7 +3,8 @@ import ast
 from interp import Add, Sub, Mul, Div, Neg, \
                     And, Or, Not, Let, Letfun, \
                     App, Name, Lit, Eq, Lt, If, \
-                    Expr, Concat, Replace, run
+                    Expr, Concat, Replace, run, \
+                    Seq
 
 from lark import Lark, Token, ParseTree, Transformer
 from lark.exceptions import VisitError
@@ -12,7 +13,7 @@ from pathlib import Path
 VERBOSE = False
 # VERBOSE = True    # uncomment for verbose output
 
-parser = Lark(Path('expr.lark').read_text(),start='expr',parser='earley',ambiguity='explicit')
+parser = Lark(Path('expr.lark').read_text(),start='start',parser='earley',ambiguity='explicit')
 # parser = Lark(Path('expr.lark').read_text(),start='expr', parser='lalr',strict=True) # uncommon for unambiguous check
 
 class ParseError(Exception):
@@ -84,6 +85,8 @@ class ToExpr(Transformer[Token,Expr]):
         return App(args[0],args[1])   
     def if_(self,args:tuple[Expr,Expr,Expr]) -> Expr:
         return If(args[0],args[1],args[2])
+    def seq(self,args:tuple[Expr,Expr]) -> Expr:
+        return Seq(args[0],args[1])
     def _ambig(self,_) -> Expr:
         raise AmbiguousParse()
     
@@ -192,4 +195,5 @@ def main():
     parse_and_run('let x = in x end')      # ParseError: missing definition
 
 if __name__ == "__main__":
-    main()
+    # main()
+    driver()    # Uncomment for testing/dev

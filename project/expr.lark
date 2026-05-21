@@ -5,8 +5,13 @@
 
 %ignore WS
 
+?start: seq
+
+?seq: expr ";" seq -> seq
+    | expr
+    
 ?expr: ifexpr
-     | "replace" atom atom "with" atom -> repl
+     | "replace" strcat strcat "with" strcat -> repl
 
 ?ifexpr: "if" ifexpr "then" ifexpr "else" ifexpr -> if_
        | logic_or
