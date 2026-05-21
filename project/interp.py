@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 type Value = int | bool | str | Closure
 
-type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | App | Name | Concat | Replace | Lit | Eq | Lt | If 
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If 
 
 @dataclass
 class Add():
@@ -147,7 +147,7 @@ class Fun():
 class Closure():
     arg: str
     bodyexpr: Expr
-    env: Env[Value]
+    env: Env[Loc[Value]]
 
 # Eval
 type Binding[V] = tuple[str,V] # this tuple type is always a pair
@@ -185,6 +185,14 @@ def lookupEnv[V](name: str, env: Env[V]) -> (V | None):
         case _:
             return None
 """
+# model memory locations as (mutable) singleton lists
+type Loc[V] = list[V] # always a singleton list
+def newLoc[V](value: V) -> Loc[V]:
+    return [value]
+def getLoc[V](loc: Loc[V]) -> V:
+    return loc[0]
+def setLoc[V](loc: Loc[V], value: V) -> None:
+    loc[0] = value
 
 class EvalError(Exception):
     pass
@@ -192,7 +200,7 @@ class EvalError(Exception):
 def eval(e: Expr) -> Value:
     return evalInEnv(emptyEnv, e)
 
-def evalInEnv(env: Env[Value], e: Expr) -> Value:
+def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
     match e:
         case Add(l,r):
             match (evalInEnv(env, l), evalInEnv(env,r)):
@@ -296,25 +304,31 @@ def evalInEnv(env: Env[Value], e: Expr) -> Value:
                 case _: 
                     raise EvalError("Replace of non-string")
         case Name(n):
-            v = lookupEnv(n, env)
-            if v is None:
+            try: 
+                l = lookupEnv(n, env)
+                return getLoc(l)
+            except EnvError:
                 raise EvalError(f"unbound name {n}")
-            return v
         case Let(n,d,b):
             v = evalInEnv(env, d)
-            newEnv = extendEnv(n, v, env)
+            l = newLoc(v)
+            newEnv = extendEnv(n, l, env)
             return evalInEnv(newEnv, b)
         case Letfun(n,a,b,i):
             c = Closure(a,b,env)
-            newEnv = extendEnv(n,c,env)
-            c.env = newEnv
-            return evalInEnv(newEnv, i)
+            l = newLoc(c)
+            newEnv = extendEnv(n,l,env)
+            c.env = newEnv  # type: ignore 
+            return evalInEnv(newEnv, i) # type: ignore
+        case Fun(arg, bodyexpr):
+            return Closure(arg,bodyexpr,env)
         case App(f,e):
             n = evalInEnv(env, f)
             a = evalInEnv(env, e)
+            l = newLoc(a)
             match n:
                 case Closure(arg,body,cenv):
-                    newEnv = extendEnv(arg,a,cenv)
+                    newEnv = extendEnv(arg,l,cenv)
                     return evalInEnv(newEnv,body)
                 case _:
                     raise EvalError("Applying a non-function.")
@@ -353,6 +367,8 @@ def run(e: Expr) -> None:
                 print(f"result: {i}")
             case str(s):
                 print(f'result: "{s}"')
+            case Closure():
+                print("<function>")
     except EvalError as err:
         print(f"[!] EvalError: {err}")
 
