@@ -12,10 +12,10 @@
     | assign 
 
 ?assign: ID ":=" ifexpr -> assign
-       | "show" ifexpr -> show
        | ifexpr
 
 ?ifexpr: "if" expr "then" expr "else" expr -> if_
+       | "show" ifexpr -> show
        | logic_or
 
 ?logic_or: logic_or "||" logic_and -> lor
