@@ -3,7 +3,8 @@ import ast
 from interp import Add, Sub, Mul, Div, Neg, \
                     And, Or, Not, Let, Letfun, \
                     App, Name, Lit, Eq, Lt, If, \
-                    Expr, Concat, Replace, run
+                    Expr, Concat, Replace, run, \
+                    Seq, Assign, Show, Read
 
 from lark import Lark, Token, ParseTree, Transformer
 from lark.exceptions import VisitError
@@ -64,6 +65,8 @@ class ToExpr(Transformer[Token,Expr]):
                 return Lit(True)
             case "false":
                 return Lit(False)
+            case "read":
+                return Read()
             case n:
                 return Name(n)
     def int(self,args:tuple[Token]) -> Expr:
@@ -84,6 +87,12 @@ class ToExpr(Transformer[Token,Expr]):
         return App(args[0],args[1])   
     def if_(self,args:tuple[Expr,Expr,Expr]) -> Expr:
         return If(args[0],args[1],args[2])
+    def seq(self,args:tuple[Expr,Expr]) -> Expr:
+        return Seq(args[0],args[1])
+    def assign(self,args:tuple[Token,Expr]) -> Expr:
+        return Assign(args[0],args[1])
+    def show(self,args:tuple[Expr]) -> Expr:
+        return Show(args[0])
     def _ambig(self,_) -> Expr:
         raise AmbiguousParse()
     
@@ -192,4 +201,5 @@ def main():
     parse_and_run('let x = in x end')      # ParseError: missing definition
 
 if __name__ == "__main__":
-    main()
+    # main()
+    driver()    # Uncomment for testing/dev
