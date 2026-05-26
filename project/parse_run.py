@@ -4,7 +4,8 @@ from interp import Add, Sub, Mul, Div, Neg, \
                     And, Or, Not, Let, Letfun, \
                     App, Name, Lit, Eq, Lt, If, \
                     Expr, Concat, Replace, run, \
-                    Seq, Assign, Show, Read
+                    Seq, Assign, Show, Read, \
+                    Reverse, Uppercase, Lowercase
 
 from lark import Lark, Token, ParseTree, Transformer
 from lark.exceptions import VisitError
@@ -93,6 +94,12 @@ class ToExpr(Transformer[Token,Expr]):
         return Assign(args[0],args[1])
     def show(self,args:tuple[Expr]) -> Expr:
         return Show(args[0])
+    def reverse(self,args:tuple[Expr]) -> Expr:
+        return Reverse(args[0])
+    def uppercase(self,args:tuple[Expr]) -> Expr:
+        return Uppercase(args[0])
+    def lowercase(self,args:tuple[Expr]) -> Expr:
+        return Lowercase(args[0])
     def _ambig(self,_) -> Expr:
         raise AmbiguousParse()
     

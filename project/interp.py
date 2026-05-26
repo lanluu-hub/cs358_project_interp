@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 type Value = int | bool | str | Closure
 
-type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If | Seq | Assign | Show | Read
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If | Seq | Assign | Show | Read | Reverse | Uppercase | Lowercase
 
 @dataclass
 class Add():
@@ -173,6 +173,24 @@ class Show():
 class Read():
     def __str__(self) -> str:
         return "read"
+    
+@dataclass
+class Reverse():
+    expr: Expr
+    def __str__(self) -> str:
+        return f"reverse {self.expr}"
+    
+@dataclass
+class Uppercase():
+    expr: Expr
+    def __str__(self) -> str:
+        return f"uppercase {self.expr}"
+    
+@dataclass
+class Lowercase():
+    expr: Expr
+    def __str__(self) -> str:
+        return f"lowercase {self.expr}"
 
 # Eval
 type Binding[V] = tuple[str,V] # this tuple type is always a pair
@@ -413,6 +431,27 @@ def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
                 return v
             except ValueError:
                 raise EvalError(f"Input not an integer")
+        case Reverse(e):
+            s = evalInEnv(env,e)
+            match s:
+                case str(s):
+                    return s[::-1]
+                case _:
+                    raise EvalError("reverse of non-string expression")
+        case Uppercase(e):
+            s = evalInEnv(env,e)
+            match s:
+                case str(s):
+                    return s.upper()
+                case _:
+                    raise EvalError("uppercase of non-string expression")
+        case Lowercase(e):
+            s = evalInEnv(env,e)
+            match s:
+                case str(s):
+                    return s.lower()
+                case _:
+                    raise EvalError("Lowercase of non-string expression")
         case _:
             raise EvalError(f"Unknow Expression type {e}")
 

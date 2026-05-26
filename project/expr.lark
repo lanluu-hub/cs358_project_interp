@@ -48,6 +48,9 @@
 ?atom: ID -> id
      | INT -> int
      | STRING -> string
+     | "reverse" atom -> reverse
+     | "uppercase" atom -> uppercase
+     | "lowercase" atom -> lowercase
      | "(" expr ")"
      | "let" ID "=" expr "in" expr "end" -> let
      | "letfun" ID "(" ID ")" "=" expr "in" expr "end" -> letfun
