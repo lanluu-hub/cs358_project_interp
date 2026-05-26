@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 type Value = int | bool | str | Closure
 
-type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If | Seq | Assign | Show
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If | Seq | Assign | Show | Read
 
 @dataclass
 class Add():
@@ -168,6 +168,11 @@ class Show():
     expr: Expr
     def __str__(self) -> str:
         return f"show {self.expr}"
+    
+@dataclass
+class Read():
+    def __str__(self) -> str:
+        return "read"
 
 # Eval
 type Binding[V] = tuple[str,V] # this tuple type is always a pair
@@ -401,6 +406,13 @@ def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
                 case Closure():
                     print("show: <function>")
             return v
+        case Read():
+            prompt = "please enter an integer: "
+            try: 
+                v = int(input(prompt).strip())
+                return v
+            except ValueError:
+                raise EvalError(f"Input not an integer")
         case _:
             raise EvalError(f"Unknow Expression type {e}")
 

@@ -4,7 +4,7 @@ from interp import Add, Sub, Mul, Div, Neg, \
                     And, Or, Not, Let, Letfun, \
                     App, Name, Lit, Eq, Lt, If, \
                     Expr, Concat, Replace, run, \
-                    Seq, Assign, Show
+                    Seq, Assign, Show, Read
 
 from lark import Lark, Token, ParseTree, Transformer
 from lark.exceptions import VisitError
@@ -65,6 +65,8 @@ class ToExpr(Transformer[Token,Expr]):
                 return Lit(True)
             case "false":
                 return Lit(False)
+            case "read":
+                return Read()
             case n:
                 return Name(n)
     def int(self,args:tuple[Token]) -> Expr:
