@@ -5,8 +5,6 @@
 
 %ignore WS
 
-?start: expr
-    
 ?expr: seq
      | "replace" strcat strcat "with" strcat -> repl
 
@@ -14,6 +12,7 @@
     | assign 
 
 ?assign: ID ":=" ifexpr -> assign
+       | "show" ifexpr -> show
        | ifexpr
 
 ?ifexpr: "if" expr "then" expr "else" expr -> if_

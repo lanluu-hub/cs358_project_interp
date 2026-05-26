@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 type Value = int | bool | str | Closure
 
-type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If | Seq | Assign
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If | Seq | Assign | Show
 
 @dataclass
 class Add():
@@ -162,6 +162,12 @@ class Assign():
     expr: Expr
     def __str__(self) -> str:
         return f"{self.name} := {self.expr}"
+    
+@dataclass
+class Show():
+    expr: Expr
+    def __str__(self) -> str:
+        return f"show {self.expr}"
 
 # Eval
 type Binding[V] = tuple[str,V] # this tuple type is always a pair
@@ -383,6 +389,18 @@ def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
                     v = evalInEnv(env, e)
                     setLoc(l, v)
                     return v
+        case Show(e):
+            v = evalInEnv(env, e)
+            match v:
+                case bool(b):
+                    print(f"show: {b}")
+                case int(i):
+                    print(f"show: {i}")
+                case str(s):
+                    print(f'show: "{s}"')
+                case Closure():
+                    print("show: <function>")
+            return v
         case _:
             raise EvalError(f"Unknow Expression type {e}")
 
@@ -452,7 +470,7 @@ def main():
             App(Name("fact"), Lit(5)))
         # expected: 120
 
-    test: Expr = Seq(Assign("x", Lit(1)), Mul(Name("x"),Lit(2)))
+    # test: Expr = Seq(Assign("x", Lit(1)), Mul(Name("x"),Lit(2)))
 
     run(a)
     run(b)
@@ -476,7 +494,7 @@ def main():
     run(t) 
     run(x)
     run(y)
-    run(test)
+    # run(test) # Uncomment for testing/dev only
 
 if __name__=="__main__":
     main()

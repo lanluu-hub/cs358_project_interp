@@ -4,7 +4,7 @@ from interp import Add, Sub, Mul, Div, Neg, \
                     And, Or, Not, Let, Letfun, \
                     App, Name, Lit, Eq, Lt, If, \
                     Expr, Concat, Replace, run, \
-                    Seq, Assign
+                    Seq, Assign, Show
 
 from lark import Lark, Token, ParseTree, Transformer
 from lark.exceptions import VisitError
@@ -13,7 +13,7 @@ from pathlib import Path
 VERBOSE = False
 # VERBOSE = True    # uncomment for verbose output
 
-parser = Lark(Path('expr.lark').read_text(),start='start',parser='earley',ambiguity='explicit')
+parser = Lark(Path('expr.lark').read_text(),start='expr',parser='earley',ambiguity='explicit')
 # parser = Lark(Path('expr.lark').read_text(),start='expr', parser='lalr',strict=True) # uncommon for unambiguous check
 
 class ParseError(Exception):
@@ -89,6 +89,8 @@ class ToExpr(Transformer[Token,Expr]):
         return Seq(args[0],args[1])
     def assign(self,args:tuple[Token,Expr]) -> Expr:
         return Assign(args[0],args[1])
+    def show(self,args:tuple[Expr]) -> Expr:
+        return Show(args[0])
     def _ambig(self,_) -> Expr:
         raise AmbiguousParse()
     
