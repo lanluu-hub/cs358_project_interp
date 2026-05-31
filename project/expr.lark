@@ -11,11 +11,9 @@
 ?seq: assign ";" seq -> seq
     | assign 
 
-?assign: ID ":=" ifexpr -> assign
-       | ifexpr
-
-?ifexpr: "if" expr "then" expr "else" expr -> if_
-       | "show" ifexpr -> show
+?assign: ID ":=" assign -> assign
+       | "show" assign -> show
+       | "if" expr "then" expr "else" assign -> if_
        | logic_or
 
 ?logic_or: logic_or "||" logic_and -> lor

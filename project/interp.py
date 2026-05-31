@@ -416,18 +416,17 @@ def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
             v = evalInEnv(env, e)
             match v:
                 case bool(b):
-                    print(f"show: {b}")
+                    print(f"{b}")
                 case int(i):
-                    print(f"show: {i}")
+                    print(f"{i}")
                 case str(s):
-                    print(f'show: "{s}"')
+                    print(f'"{s}"')
                 case Closure():
-                    print("show: <function>")
+                    print("<function>")
             return v
         case Read():
-            prompt = "please enter an integer: "
             try: 
-                v = int(input(prompt).strip())
+                v = int(input())
                 return v
             except ValueError:
                 raise EvalError(f"Input not an integer")
@@ -460,11 +459,11 @@ def run(e: Expr) -> None:
     try:
         match eval(e):
             case bool(b):
-                print(f"result: {b}")
+                print(f"{b}")
             case int(i):
-                print(f"result: {i}")
+                print(f"{i}")
             case str(s):
-                print(f'result: "{s}"')
+                print(f'"{s}"')
             case Closure():
                 print("<function>")
     except EvalError as err:
