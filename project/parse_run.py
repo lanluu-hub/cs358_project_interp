@@ -13,7 +13,7 @@ from pathlib import Path
 import readline # type: ignore  # allows editing and history for input()
 
 VERBOSE = False
-VERBOSE = True    # uncomment for verbose output
+# VERBOSE = True    # uncomment for verbose output
 
 parser = Lark(Path('expr.lark').read_text(),start='expr',parser='earley',ambiguity='explicit')
 # parser = Lark(Path('expr.lark').read_text(),start='expr', parser='lalr',strict=True) # uncommon for unambiguous check
@@ -257,12 +257,23 @@ def demoCore():
                         then 1 \
                         else n * fact(n - 1) \
                   in let x = read in show x; fact(x) end end') 
+    
+    parse_and_run('show "MUTATION DEMO"; \
+                  let x = 0 in \
+                    show x; \
+                    x := x + 1; \
+                    show x; \
+                    x := x + 1; \
+                    show x \
+                  end')
 
 def main():
-    # demoDSL()
-    # demoCore()
-    unitTestSuite()
+    # demoDSL()     # demo DSL
+    # demoCore()    # demo Core interp (int, bool,...) 
+    # unitTestSuite()
+    pass
     
 if __name__ == "__main__":
-    # main()
-    driver()    # Uncomment for testing/dev
+    # main()      # Demo tests
+    # driver()    # Uncomment for testing/dev
+    pass
