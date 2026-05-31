@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 type Value = int | bool | str | Closure
 
-type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If 
+type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | App | Name | Concat | Replace | Lit | Eq | Lt | If | Seq | Assign | Show | Read | Reverse | Uppercase | Lowercase
 
 @dataclass
 class Add():
@@ -148,6 +148,49 @@ class Closure():
     arg: str
     bodyexpr: Expr
     env: Env[Loc[Value]]
+
+@dataclass
+class Seq():
+    expr1: Expr
+    expr2: Expr
+    def __str__(self) -> str:
+        return f"({self.expr1}; {self.expr2})" 
+    
+@dataclass
+class Assign():
+    name: str
+    expr: Expr
+    def __str__(self) -> str:
+        return f"{self.name} := {self.expr}"
+    
+@dataclass
+class Show():
+    expr: Expr
+    def __str__(self) -> str:
+        return f"show {self.expr}"
+    
+@dataclass
+class Read():
+    def __str__(self) -> str:
+        return "read"
+    
+@dataclass
+class Reverse():
+    expr: Expr
+    def __str__(self) -> str:
+        return f"reverse {self.expr}"
+    
+@dataclass
+class Uppercase():
+    expr: Expr
+    def __str__(self) -> str:
+        return f"uppercase {self.expr}"
+    
+@dataclass
+class Lowercase():
+    expr: Expr
+    def __str__(self) -> str:
+        return f"lowercase {self.expr}"
 
 # Eval
 type Binding[V] = tuple[str,V] # this tuple type is always a pair
@@ -354,6 +397,60 @@ def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
                     return evalInEnv(env, e)
                 case _:
                     raise EvalError("condition is not a boolean")
+        case Seq(e1,e2):
+            evalInEnv(env, e1)
+            return evalInEnv(env, e2)
+        case Assign(n,e):
+            try:
+                l = lookupEnv(n, env)
+            except EnvError:
+                raise EvalError(f"unbound name {n}")
+            match getLoc(l):
+                case Closure():
+                    raise EvalError("cannot assign to function name")
+                case _:
+                    v = evalInEnv(env, e)
+                    setLoc(l, v)
+                    return v
+        case Show(e):
+            v = evalInEnv(env, e)
+            match v:
+                case bool(b):
+                    print(f"{b}")
+                case int(i):
+                    print(f"{i}")
+                case str(s):
+                    print(f'"{s}"')
+                case Closure():
+                    print("<function>")
+            return v
+        case Read():
+            try: 
+                v = int(input())
+                return v
+            except ValueError:
+                raise EvalError(f"Input not an integer")
+        case Reverse(e):
+            s = evalInEnv(env,e)
+            match s:
+                case str(s):
+                    return s[::-1]
+                case _:
+                    raise EvalError("reverse of non-string expression")
+        case Uppercase(e):
+            s = evalInEnv(env,e)
+            match s:
+                case str(s):
+                    return s.upper()
+                case _:
+                    raise EvalError("uppercase of non-string expression")
+        case Lowercase(e):
+            s = evalInEnv(env,e)
+            match s:
+                case str(s):
+                    return s.lower()
+                case _:
+                    raise EvalError("Lowercase of non-string expression")
         case _:
             raise EvalError(f"Unknow Expression type {e}")
 
@@ -362,11 +459,11 @@ def run(e: Expr) -> None:
     try:
         match eval(e):
             case bool(b):
-                print(f"result: {b}")
+                print(f"{b}")
             case int(i):
-                print(f"result: {i}")
+                print(f"{i}")
             case str(s):
-                print(f'result: "{s}"')
+                print(f'"{s}"')
             case Closure():
                 print("<function>")
     except EvalError as err:
@@ -423,6 +520,8 @@ def main():
             App(Name("fact"), Lit(5)))
         # expected: 120
 
+    # test: Expr = Seq(Assign("x", Lit(1)), Mul(Name("x"),Lit(2)))
+
     run(a)
     run(b)
     run(c)
@@ -445,6 +544,7 @@ def main():
     run(t) 
     run(x)
     run(y)
+    # run(test) # Uncomment for testing/dev only
 
 if __name__=="__main__":
     main()

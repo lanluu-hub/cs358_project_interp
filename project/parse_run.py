@@ -3,11 +3,14 @@ import ast
 from interp import Add, Sub, Mul, Div, Neg, \
                     And, Or, Not, Let, Letfun, \
                     App, Name, Lit, Eq, Lt, If, \
-                    Expr, Concat, Replace, run
+                    Expr, Concat, Replace, run, \
+                    Seq, Assign, Show, Read, \
+                    Reverse, Uppercase, Lowercase
 
 from lark import Lark, Token, ParseTree, Transformer
 from lark.exceptions import VisitError
 from pathlib import Path
+import readline # type: ignore  # allows editing and history for input()
 
 VERBOSE = False
 # VERBOSE = True    # uncomment for verbose output
@@ -64,6 +67,8 @@ class ToExpr(Transformer[Token,Expr]):
                 return Lit(True)
             case "false":
                 return Lit(False)
+            case "read":
+                return Read()
             case n:
                 return Name(n)
     def int(self,args:tuple[Token]) -> Expr:
@@ -84,7 +89,22 @@ class ToExpr(Transformer[Token,Expr]):
         return App(args[0],args[1])   
     def if_(self,args:tuple[Expr,Expr,Expr]) -> Expr:
         return If(args[0],args[1],args[2])
+    def seq(self,args:tuple[Expr,Expr]) -> Expr:
+        return Seq(args[0],args[1])
+    def assign(self,args:tuple[Token,Expr]) -> Expr:
+        return Assign(args[0].value,args[1])
+    def show(self,args:tuple[Expr]) -> Expr:
+        return Show(args[0])
+    def reverse(self,args:tuple[Expr]) -> Expr:
+        return Reverse(args[0])
+    def uppercase(self,args:tuple[Expr]) -> Expr:
+        return Uppercase(args[0])
+    def lowercase(self,args:tuple[Expr]) -> Expr:
+        return Lowercase(args[0])
     def _ambig(self,_) -> Expr:
+        for expr in _:
+            if isinstance(expr, Show):
+                return expr
         raise AmbiguousParse()
     
 def genAST(t:ParseTree) -> Expr:
@@ -102,6 +122,8 @@ def driver():
     while True:
         try:
             s = input('expr: ')
+            while s[-1] == '\\':
+                s = s[:-1] + '\n' + input('... ')
             t = parse(s)
             print("raw:", t)    
             print("pretty:")
@@ -134,7 +156,26 @@ def parse_and_run(s:str) -> None:
         print("parse error:")
         print(e)
 
-def main():
+def just_parse(s:str) -> Expr | None:
+    try:
+        t = parse(s)
+        if VERBOSE:
+            print("raw:", t)    
+            print("pretty:")
+            print(t.pretty())
+        ast = genAST(t)
+        if VERBOSE:
+            print("raw AST:", repr(ast))  # use repr() to avoid str() pretty-printing
+        return ast
+    except AmbiguousParse:
+        print("ambiguous parse")                
+        return None
+    except ParseError as e:
+        print("parse error:")
+        print(e)
+        return None
+
+def unitTestSuite():
     # arithmetic
     parse_and_run("1 + 2")
     parse_and_run("let x = 2 in x * 3 end")
@@ -163,6 +204,9 @@ def main():
     parse_and_run('replace "hello world" "world" with "banana"')
     parse_and_run('replace "aabbaa" "aa" with "xx"')   # first instance only
     parse_and_run('replace "hello" "xyz" with "banana"')  # target not found
+    parse_and_run('let s = reverse "abc" in s end')
+    parse_and_run('uppercase "abc"')
+    parse_and_run('lowercase "AbC"')
 
     # DSL + core combined
     parse_and_run('if "hello" == "hello" then "yes" else "no"')
@@ -191,5 +235,45 @@ def main():
     parse_and_run('1 +')                   # ParseError: incomplete expression
     parse_and_run('let x = in x end')      # ParseError: missing definition
 
+def demoDSL():
+    parse_and_run(
+        'show "DSL DEMO"; \
+        letfun greet(x) = "hello, " ++ x in \
+        let s = greet("world") in \
+        let t = reverse s in \
+        let u = uppercase t in \
+        show "this is s:"; show s; \
+        show "this is t:"; show t; \
+        show "this is uppercase t:"; show u \
+        end end end end'
+    )
+    parse_and_run('replace "hello world" "world" with "python"')
+
+def demoCore():
+    parse_and_run('show "CORE DEMO"; \
+                  show "enter a number:"; \
+                  letfun fact(n) = \
+                    if n == 0 \
+                        then 1 \
+                        else n * fact(n - 1) \
+                  in let x = read in show x; fact(x) end end') 
+    
+    parse_and_run('show "MUTATION DEMO"; \
+                  let x = 0 in \
+                    show x; \
+                    x := x + 1; \
+                    show x; \
+                    x := x + 1; \
+                    show x \
+                  end')
+
+def main():
+    # demoDSL()     # demo DSL
+    # demoCore()    # demo Core interp (int, bool,...) 
+    # unitTestSuite()
+    pass
+    
 if __name__ == "__main__":
-    main()
+    # main()      # Demo tests
+    # driver()    # Uncomment for testing/dev
+    pass
