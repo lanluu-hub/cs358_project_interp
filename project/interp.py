@@ -475,9 +475,13 @@ This DSL extends the core language with string manipulation.
 Values: Python strings (unicode)
 Literals: Lit("string") - quoted string literals
 Operators:
-  - Concat(l, r): concatenates two strings
-  - Replace(source, target, replacement): replaces first instance 
+    - Concat(l, r): concatenates two strings
+    - Replace(source, target, replacement): replaces first instance 
     of target in source with replacement
+    - Reverse(expr): returns a new string with characters in reverse order
+    - Uppercase(expr): returns a new string with all characters uppercased
+    - Lowercase(expr): returns a new string with all characters lowercased
+All operators are pure -- original strings are never mutated.
 Equality: string equality is character-by-character (==)
 """
 

@@ -16,7 +16,7 @@ VERBOSE = False
 # VERBOSE = True    # uncomment for verbose output
 
 parser = Lark(Path('expr.lark').read_text(),start='expr',parser='earley',ambiguity='explicit')
-# parser = Lark(Path('expr.lark').read_text(),start='expr', parser='lalr',strict=True) # uncommon for unambiguous check
+parser = Lark(Path('expr.lark').read_text(),start='expr', parser='lalr',strict=True) # uncommon for unambiguous check
 
 class ParseError(Exception):
     pass
@@ -268,8 +268,8 @@ def demoCore():
                   end')
 
 def main():
-    # demoDSL()     # demo DSL
-    # demoCore()    # demo Core interp (int, bool,...) 
+    demoDSL()     # demo DSL
+    demoCore()    # demo Core interp (int, bool,...) 
     # unitTestSuite()
     pass
     
