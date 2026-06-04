@@ -268,8 +268,8 @@ def demoCore():
                   end')
 
 def main():
-    # demoDSL()     # demo DSL
-    # demoCore()    # demo Core interp (int, bool,...) 
+    demoDSL()     # demo DSL
+    demoCore()    # demo Core interp (int, bool,...) 
     # unitTestSuite()
     pass
     
