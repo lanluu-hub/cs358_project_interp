@@ -6,7 +6,6 @@
 %ignore WS
 
 ?expr: seq
-     | "replace" strcat strcat "with" strcat -> repl
 
 ?seq: assign ";" seq -> seq
     | assign 
@@ -14,6 +13,7 @@
 ?assign: ID ":=" assign -> assign
        | "show" assign -> show
        | "if" expr "then" expr "else" assign -> if_
+       | "replace" strcat strcat "with" strcat -> repl
        | logic_or
 
 ?logic_or: logic_or "||" logic_and -> lor

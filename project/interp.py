@@ -420,7 +420,7 @@ def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
                 case int(i):
                     print(f"{i}")
                 case str(s):
-                    print(f'"{s}"')
+                    print(f'{s}')
                 case Closure():
                     print("<function>")
             return v
@@ -463,7 +463,7 @@ def run(e: Expr) -> None:
             case int(i):
                 print(f"{i}")
             case str(s):
-                print(f'"{s}"')
+                print(f'{s}')
             case Closure():
                 print("<function>")
     except EvalError as err:
