@@ -1,7 +1,27 @@
-# CS358 Interpreter
-# Domain: Strings DSL
+# CS358 Principles of Programming Languages -- Spring 2026
+# Project: Tree-Walking Interpreter (Strings DSL)
 # Author: Lan Luu
-#   Milestone 1 - due April 26
+#
+# Milestones:
+#   Milestone 1 (April 26): AST + evaluator for pure expressions
+#   Milestone 2 (May 15):   Parser integration (expr.lark, parse_run.py)
+#   Milestone 3 (June 5):   Mutable variables (Loc), Assign, Seq, Show, Read,
+#                           + DSL extensions: Reverse, Uppercase, Lowercase
+#
+# Architecture:
+#   - Three-file structure:
+#       interp.py     -- AST node definitions, evaluator, Loc mutation model
+#       expr.lark     -- Lark grammar (Earley parser)
+#       parse_run.py  -- transformer, parse_and_run, driver, main
+#   - Environment model: immutable tuple of (name, Loc[Value]) bindings
+#   - Mutation via Loc (singleton mutable list): newLoc, getLoc, setLoc
+#   - bool is a subtype of int in Python; all arithmetic ops guard with isinstance
+#
+# Domain-Specific Extension: Strings DSL
+#   Values:    Python str (unicode)
+#   Literals:  Lit("...") -- quoted string literals
+#   Operators: Concat, Replace, Reverse, Uppercase, Lowercase (all pure)
+#   Equality:  character-by-character via ==
 
 from dataclasses import dataclass
 
@@ -11,6 +31,10 @@ type Expr = Add | Sub | Mul | Div | Neg | Or | And | Not | Let | Letfun | Fun | 
 
 @dataclass
 class Add():
+    """AST node for integer addition.
+
+    Invariant: left and right must evaluate to int (not bool).
+    """
     left: Expr
     right: Expr
     def __str__(self) -> str:
@@ -18,6 +42,10 @@ class Add():
     
 @dataclass
 class Sub():
+    """AST node for integer subtraction.
+
+    Invariant: left and right must evaluate to int (not bool).
+    """
     left: Expr
     right: Expr
     def __str__(self) -> str:
@@ -25,6 +53,10 @@ class Sub():
     
 @dataclass
 class Mul():
+    """AST node for integer multiplication.
+
+    Invariant: left and right must evaluate to int (not bool).
+    """
     left: Expr
     right: Expr
     def __str__(self) -> str:
@@ -32,6 +64,10 @@ class Mul():
     
 @dataclass
 class Div():
+    """AST node for integer division (floor division).
+
+    Invariant: left and right must evaluate to int (not bool); right must be nonzero.
+    """
     left: Expr
     right: Expr
     def __str__(self) -> str:
@@ -39,12 +75,20 @@ class Div():
     
 @dataclass
 class Neg():
+    """AST node for integer negation (unary minus).
+
+    Invariant: subexpr must evaluate to int (not bool).
+    """
     subexpr: Expr
     def __str__(self) -> str:
         return f"(- {self.subexpr})"
     
 @dataclass
 class Or():
+    """AST node for short-circuit logical OR.
+
+    Invariant: left must evaluate to bool; right is only evaluated if left is False.
+    """
     left: Expr
     right: Expr
     def __str__(self) -> str:
@@ -52,6 +96,10 @@ class Or():
     
 @dataclass
 class And():
+    """AST node for short-circuit logical AND.
+
+    Invariant: left must evaluate to bool; right is only evaluated if left is True.
+    """
     left: Expr
     right: Expr
     def __str__(self) -> str:
@@ -59,20 +107,48 @@ class And():
     
 @dataclass
 class Not():
+    """AST node for logical NOT.
+
+    Invariant: subexpr must evaluate to bool.
+    """
     subexpr: Expr
     def __str__(self) -> str:
         return f"(not {self.subexpr})"
-    
+
 @dataclass
 class Let():
+    """AST node for immutable let-binding (becomes mutable via Loc in eval).
+
+    The bound name is wrapped in a Loc in evalInEnv, making it assignable
+    within the body scope via Assign.
+
+    Params:
+        name:     variable name to bind
+        defexpr:  expression whose value is bound to name
+        bodyexpr: expression evaluated in the extended environment
+    """
     name: str
     defexpr: Expr
     bodyexpr: Expr
     def __str__(self) -> str:
-        return f"(let {self.name} = {self.defexpr} in {self.bodyexpr})" 
-    
+        return f"(let {self.name} = {self.defexpr} in {self.bodyexpr})"
+
 @dataclass
 class Letfun():
+    """AST node for named recursive function definition.
+
+    The closure is stored in a Loc to support recursion: the closure's env
+    is patched (c.env = newEnv) after the Loc is created so that the function
+    can refer to itself by name.
+
+    Only supports single-argument functions. Multi-arg support is a planned extension.
+
+    Params:
+        name:     function name (bound in inexpr and recursively in bodyexpr)
+        arg:      parameter name (bound in bodyexpr at call site)
+        bodyexpr: function body
+        inexpr:   expression evaluated in the scope where the function is bound
+    """
     name: str
     arg: str
     bodyexpr: Expr
@@ -82,6 +158,16 @@ class Letfun():
 
 @dataclass
 class App():
+    """AST node for function application.
+
+    fexpr must evaluate to a Closure. The argument is wrapped in a newLoc
+    before being added to the closure's environment, consistent with the
+    uniform Loc-based environment model.
+
+    Params:
+        fexpr: expression that evaluates to a Closure
+        arg:   argument expression passed to the function
+    """
     fexpr: Expr
     arg: Expr
     def __str__(self) -> str:
@@ -89,19 +175,46 @@ class App():
 
 @dataclass
 class Name():
+    """AST node for variable reference.
+
+    Looks up name in the current environment and dereferences the Loc.
+
+    Params:
+        name: variable name to look up
+    """
     name: str
     def __str__(self) -> str:
         return self.name
-    
+
 @dataclass
 class Concat():
+    """AST node for string concatenation (Strings DSL).
+
+    Concrete syntax: left ++ right
+
+    Invariant: left and right must evaluate to str.
+    """
     left: Expr
     right: Expr
     def __str__(self) -> str:
         return f"(concatenate {self.left} {self.right})"
-    
+
 @dataclass
 class Replace():
+    """AST node for first-instance substring replacement (Strings DSL).
+
+    Concrete syntax: replace source target with replacement
+
+    If target is not found in source, returns source unchanged.
+    All operators are pure -- no mutation of the original string.
+
+    Invariant: source, target, and replacement must all evaluate to str.
+
+    Params:
+        source:      string to search in
+        target:      substring to find (first instance only)
+        replacement: string to substitute in place of target
+    """
     source: Expr
     target: Expr
     replacement: Expr
@@ -110,12 +223,24 @@ class Replace():
 
 @dataclass
 class Lit():
+    """AST node for a literal value (int, bool, or str).
+
+    Params:
+        value: the literal value; must be int, bool, or str
+    """
     value: Value
     def __str__(self) -> str:
         return f"{self.value}"
-    
+
 @dataclass
 class Eq():
+    """AST node for equality comparison.
+
+    Returns False if operands are of different types (no implicit coercion).
+    For str, equality is character-by-character.
+
+    Invariant: operands may be any Value type, but must match types to be equal.
+    """
     left: Expr
     right: Expr
     def __str__(self):
@@ -123,6 +248,10 @@ class Eq():
 
 @dataclass
 class Lt():
+    """AST node for less-than comparison.
+
+    Invariant: left and right must evaluate to int (not bool).
+    """
     left: Expr
     right: Expr
     def __str__(self):
@@ -130,14 +259,35 @@ class Lt():
 
 @dataclass
 class If():
+    """AST node for conditional expression.
+
+    Only the taken branch is evaluated (short-circuit).
+
+    Invariant: boolopr must evaluate to bool.
+
+    Params:
+        boolopr:  condition expression
+        thenexpr: evaluated if boolopr is True
+        elseexpr: evaluated if boolopr is False
+    """
     boolopr: Expr
     thenexpr: Expr
     elseexpr: Expr
     def __str__(self):
         return f"if {self.boolopr} then {self.thenexpr} else {self.elseexpr}"
-    
+
 @dataclass
 class Fun():
+    """AST node for anonymous lambda expression (future extension).
+
+    Not currently reachable from the parser. Reserved for a planned lambda
+    syntax (e.g., `fun x -> body`). evalInEnv handles Fun by returning a
+    Closure directly, without binding a name.
+
+    Params:
+        arg:      parameter name
+        bodyexpr: function body
+    """
     arg: str
     bodyexpr: Expr
     def __str__(self) -> str:
@@ -145,80 +295,181 @@ class Fun():
 
 @dataclass
 class Closure():
+    """Runtime value representing a captured function environment.
+
+    Created by Letfun (and Fun) during evaluation. Not an AST node --
+    never appears in source programs, only as an eval result.
+
+    The env field is patched post-construction in the Letfun case to
+    enable recursion (c.env = newEnv after the Loc is created).
+
+    Params:
+        arg:      parameter name
+        bodyexpr: function body (unevaluated)
+        env:      captured lexical environment at point of closure creation
+    """
     arg: str
     bodyexpr: Expr
     env: Env[Loc[Value]]
 
 @dataclass
 class Seq():
+    """AST node for expression sequencing (e1 ; e2).
+
+    Evaluates expr1 for side effects only; its value is discarded.
+    Returns the value of expr2.
+
+    Concrete syntax: expr1 ; expr2 (right-associative, lowest precedence)
+    """
     expr1: Expr
     expr2: Expr
     def __str__(self) -> str:
-        return f"({self.expr1}; {self.expr2})" 
-    
+        return f"({self.expr1}; {self.expr2})"
+
 @dataclass
 class Assign():
+    """AST node for mutable variable assignment.
+
+    Looks up name in the current environment, checks that the Loc does
+    not hold a Closure (function names are not assignable), then mutates
+    the Loc in place and returns the assigned value.
+
+    Concrete syntax: name := expr
+
+    Params:
+        name: variable name; must be bound in the current environment
+        expr: expression whose value is stored into the Loc
+    Raises:
+        EvalError: if name is unbound or refers to a function (Closure)
+    """
     name: str
     expr: Expr
     def __str__(self) -> str:
         return f"{self.name} := {self.expr}"
-    
+
 @dataclass
 class Show():
+    """AST node for mid-evaluation output.
+
+    Evaluates expr, prints the value to stdout (bare, no prefix or quotes),
+    and returns the value so it can be used further in the expression.
+
+    Concrete syntax: show expr
+    """
     expr: Expr
     def __str__(self) -> str:
         return f"show {self.expr}"
-    
+
 @dataclass
 class Read():
+    """AST node for integer input from stdin.
+
+    Prompts the user and reads a line, converting it to int.
+
+    Concrete syntax: read (parsed as an ID and special-cased in ToExpr.id)
+
+    Raises:
+        EvalError: if the input cannot be parsed as an integer
+    """
     def __str__(self) -> str:
         return "read"
-    
+
 @dataclass
 class Reverse():
+    """AST node for string reversal (Strings DSL).
+
+    Pure operator -- returns a fresh reversed string, leaves original unchanged.
+
+    Concrete syntax: reverse atom  (atom-level precedence)
+
+    Invariant: expr must evaluate to str.
+    """
     expr: Expr
     def __str__(self) -> str:
         return f"reverse {self.expr}"
-    
+
 @dataclass
 class Uppercase():
+    """AST node for string uppercasing (Strings DSL).
+
+    Pure operator -- returns a fresh uppercased string, leaves original unchanged.
+
+    Concrete syntax: uppercase atom  (atom-level precedence)
+
+    Invariant: expr must evaluate to str.
+    """
     expr: Expr
     def __str__(self) -> str:
         return f"uppercase {self.expr}"
-    
+
 @dataclass
 class Lowercase():
+    """AST node for string lowercasing (Strings DSL).
+
+    Pure operator -- returns a fresh lowercased string, leaves original unchanged.
+
+    Concrete syntax: lowercase atom  (atom-level precedence)
+
+    Invariant: expr must evaluate to str.
+    """
     expr: Expr
     def __str__(self) -> str:
         return f"lowercase {self.expr}"
 
-# Eval
-type Binding[V] = tuple[str,V] # this tuple type is always a pair
-type Env[V] = tuple[Binding[V], ...] # This tuple type has arbitrary length
+# ---------------------------------------------------------------------------
+# Environment model
+# ---------------------------------------------------------------------------
+# An environment is an immutable tuple of (name, Loc[Value]) bindings.
+# Shadowing is supported: lookupEnv returns the first (innermost) match.
+# All values in the environment are wrapped in Loc to support mutation
+# via Assign without changing the environment structure itself.
+# ---------------------------------------------------------------------------
+
+type Binding[V] = tuple[str,V]         # always a (name, value) pair
+type Env[V] = tuple[Binding[V], ...]   # arbitrary-length tuple of bindings
 
 from typing import Any
-emptyEnv : Env[Any] = () # the empty enviroment has no bindings
+emptyEnv : Env[Any] = ()  # the empty environment has no bindings
 
-def extendEnv[V](name: str, value: V, env:Env[V]) -> Env[V]:
-    '''Return a new environment that extends the input environment env with a new binding from name to value'''
-    return ((name,value),) + env
-    
+def extendEnv[V](name: str, value: V, env: Env[V]) -> Env[V]:
+    """Return a new environment extending env with a binding from name to value.
+
+    The new binding is prepended, so it shadows any existing binding for name.
+
+    Params:
+        name:  variable name to bind
+        value: value (typically a Loc[Value]) to associate with name
+        env:   existing environment to extend
+
+    Returns:
+        A new Env with the new binding at the front
+    """
+    return ((name, value),) + env
+
 class EnvError(Exception):
     pass
 
-def lookupEnv[V](name: str, env: Env[V]) -> V :
-    '''Return the first value bound to name in the input environment env
-       (or raise an exception if there is no such binding)'''
+def lookupEnv[V](name: str, env: Env[V]) -> V:
+    """Return the first value bound to name in env (innermost scope wins).
+
+    Params:
+        name: variable name to look up
+        env:  environment to search
+
+    Returns:
+        The value (typically Loc[Value]) bound to name
+
+    Raises:
+        EnvError: if name has no binding in env
+    """
     try:
-        return next(v for (n,v) in env if n == name)   # use handy generator expression to search for name
+        return next(v for (n, v) in env if n == name)
     except StopIteration:
-        raise EnvError('name is not in environment: ' + name)        
+        raise EnvError('name is not in environment: ' + name)
 
 """
-# Alternative (simplier)
+# Alternative (simpler recursive version, kept for reference)
 def lookupEnv[V](name: str, env: Env[V]) -> (V | None):
-    '''Return the first value bound to name in the input environment env
-       (or raise an exception if there is no such binding)'''
     match env:
         case ((n,v), *rest) :
             if n == name:
@@ -228,22 +479,90 @@ def lookupEnv[V](name: str, env: Env[V]) -> (V | None):
         case _:
             return None
 """
-# model memory locations as (mutable) singleton lists
-type Loc[V] = list[V] # always a singleton list
+
+# ---------------------------------------------------------------------------
+# Location (Loc) -- mutable memory cell model
+# ---------------------------------------------------------------------------
+# A Loc is a singleton list [value], giving us a stable reference cell
+# that can be mutated in place via setLoc without touching the environment.
+# This mirrors how imperative languages store variables in mutable heap cells.
+# ---------------------------------------------------------------------------
+
+type Loc[V] = list[V]  # always a singleton list
+
 def newLoc[V](value: V) -> Loc[V]:
+    """Allocate a new mutable location holding value.
+
+    Params:
+        value: initial value to store
+
+    Returns:
+        A new Loc[V] (singleton list) containing value
+    """
     return [value]
+
 def getLoc[V](loc: Loc[V]) -> V:
+    """Read the current value stored in loc.
+
+    Params:
+        loc: a Loc[V] (singleton list)
+
+    Returns:
+        The value currently stored in loc
+    """
     return loc[0]
+
 def setLoc[V](loc: Loc[V], value: V) -> None:
+    """Mutate loc in place to store value.
+
+    Params:
+        loc:   a Loc[V] (singleton list) to update
+        value: new value to store
+    """
     loc[0] = value
+
+# ---------------------------------------------------------------------------
+# Evaluator
+# ---------------------------------------------------------------------------
 
 class EvalError(Exception):
     pass
 
 def eval(e: Expr) -> Value:
+    """Evaluate expression e in the empty environment.
+
+    Entry point for top-level evaluation. Delegates to evalInEnv.
+
+    Params:
+        e: AST expression to evaluate
+
+    Returns:
+        The Value produced by evaluating e
+
+    Raises:
+        EvalError: on type errors, unbound names, division by zero, etc.
+    """
     return evalInEnv(emptyEnv, e)
 
 def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
+    """Evaluate expression e in environment env.
+
+    Dispatches on the AST node type via structural pattern matching.
+    All variable lookups dereference through Loc (getLoc).
+    bool is a subtype of int in Python, so all arithmetic and comparison
+    ops explicitly guard with isinstance(v, bool) to reject booleans.
+
+    Params:
+        env: current environment mapping names to Loc[Value]
+        e:   AST expression to evaluate
+
+    Returns:
+        The Value produced by evaluating e
+
+    Raises:
+        EvalError: on type mismatches, unbound names, division by zero,
+                   non-integer Read input, or assignment to a function name
+    """
     match e:
         case Add(l,r):
             match (evalInEnv(env, l), evalInEnv(env,r)):
@@ -455,6 +774,25 @@ def evalInEnv(env: Env[Loc[Value]], e: Expr) -> Value:
             raise EvalError(f"Unknow Expression type {e}")
 
 def run(e: Expr) -> None:
+    """Evaluate e and print its value to stdout.
+
+    Top-level runner used by parse_run.py and the interp.py test suite.
+    Prints the expression (via __str__) before evaluating, then prints
+    the resulting value in a type-appropriate format. Catches and reports
+    EvalError without propagating it, so the test suite continues running.
+
+    Output format:
+        bool    -> "True" or "False"
+        int     -> decimal string
+        str     -> bare string (no quotes)
+        Closure -> "<function>"
+
+    Params:
+        e: AST expression to evaluate and display
+
+    Raises:
+        Does not raise; EvalError is caught and printed as "[!] EvalError: ..."
+    """
     print(f"running {e}")
     try:
         match eval(e):
